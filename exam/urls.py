@@ -16,23 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path,include
-from exam_sch.views import roles_create,   user_table_detail,gender_detail
-from exam_sch.views import user_table_create,DeptViewSet,SessionViewSet,Programme_LevelViewSet,GenderViewSet
 from rest_framework.decorators import api_view
 from rest_framework import routers
 from exam_sch import views
-
-router = routers.DefaultRouter()
-router.register(r'departments', views.DeptViewSet, basename='department')
-router.register(r'session', views.SessionViewSet, basename='session')
-router.register(r'programe_level', views.Programme_LevelViewSet, basename='programe_level')
-router.register(r'gender',views.GenderViewSet,basename= 'gender')
 
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("exam_sch/",include('exam_sch.urls')),
-    path('exam_prop/', include(router.urls)),
  
     # path('user_table/create/', user_table_create, name='user-table-create'),
     # path('roles_table/create/',roles_create,name="roles-table-create")

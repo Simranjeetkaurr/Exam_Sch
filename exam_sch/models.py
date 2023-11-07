@@ -1,3 +1,4 @@
+from xml.dom import ValidationErr
 from django.db import models
 import secrets
 import string
@@ -107,3 +108,35 @@ class Subject(models.Model):
 
     def __str__(self):
         return self.subject_name
+    
+# Semester
+class Semester(models.Model):
+    semester_id = models.AutoField(primary_key=True)
+    semester_name = models.CharField(max_length=255, unique=True)
+    # semester_code = models.CharField(max_length=10, unique=True)
+
+    def __str__(self):
+        return self.semester_name    
+    
+
+# Slots
+
+class Slot(models.Model):
+    slot_id = models.AutoField(primary_key=True)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    date = models.DateField()
+    slot_created = models.CharField(max_length=11, editable=False, unique=True)
+
+    def clean(self):
+        # Calculate the duration in minutes between start_time and end_time
+        duration = (self.end_time - self.start_time).seconds // 60
+
+        # Check if the duration is more than 180 minutes (3 hours)
+        if duration > 180:
+            raise ValidationErr(('The slot duration cannot be more than 3 hours.'))
+
+    def save(self, *args, **kwargs):
+        # Generate the slot_created as a combination of start_time and end_time
+        self.slot_created = f'{self.start_time.strftime("%H:%M")}-{self.end_time.strftime("%H:%M")}'
+        super(Slot, self).save(*args, **kwargs)
