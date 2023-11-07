@@ -1,6 +1,7 @@
 
 from rest_framework import serializers
 from exam_sch.models import roles, user_table,Dept,Session,Programme_Level,gender,Program_type,Subject
+from exam_sch.models import Semester,Slot
 
 
 class RolesSerializer(serializers.ModelSerializer):
@@ -40,10 +41,20 @@ class GenderSerializer(serializers.ModelSerializer):
 
 class Program_typeSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Session
+        model = Program_type
         fields = '__all__'
 
 class SubjectSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Session
+        model = Subject
+        fields = '__all__'
+
+class SemesterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Semester
+        fields = '__all__'
+
+class SlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Slot
         fields = '__all__'

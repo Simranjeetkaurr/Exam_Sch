@@ -3,21 +3,25 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import viewsets,status
-from .models import user_table,roles,Dept,Session,Programme_Level,gender,Program_type
+from .models import user_table,roles,Dept,Session,Programme_Level,gender,Program_type,Subject,Semester,Slot
 from .serializers import UserTableSerializer, LoginSerializer,DeptSerializer,SessionSerializer,Program_LevelSerializer
-from .serializers import RolesSerializer,GenderSerializer,Program_typeSerializer
+from .serializers import RolesSerializer,GenderSerializer,Program_typeSerializer,SubjectSerializer,SemesterSerializer,SlotSerializer
 from django.contrib.auth import authenticate, login
 from rest_framework_simplejwt.tokens import RefreshToken
 
-@api_view(['POST'])
+
+@api_view(['GET', 'POST'])
 def roles_create(request):
-    if request.method == 'POST':
+    if request.method == 'GET':
+        role = roles.objects.all()
+        serializer = RolesSerializer(role, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
         serializer = RolesSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['GET', 'PUT', 'DELETE'])
 def roles_detail(request, pk):
@@ -41,39 +45,40 @@ def roles_detail(request, pk):
         role_obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
-@api_view(['POST'])
+    
+@api_view(['GET', 'POST'])
 def user_table_create(request):
-    if request.method == 'POST':
+    if request.method == 'GET':
+        user_tables = user_table.objects.all()
+        serializer = UserTableSerializer(user_tables, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
         serializer = UserTableSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(['GET', 'PUT', 'DELETE'])
 def user_table_detail(request, pk):
     try:
-        user_obj = user_table.objects.get(pk=pk)
+        user = user_table.objects.get(pk=pk)
     except user_table.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+        return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        serializer = UserTableSerializer(user_obj)
+        serializer = UserTableSerializer(user)
         return Response(serializer.data)
-
     elif request.method == 'PUT':
-        serializer = UserTableSerializer(user_obj, data=request.data)
+        serializer = UserTableSerializer(user, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
     elif request.method == 'DELETE':
-        user_obj.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
+        user.delete()
+        return Response({'message': 'User deleted'}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['POST'])
@@ -111,27 +116,85 @@ def user_login(request):
 
 # Department 
 
-class DeptViewSet(viewsets.ModelViewSet):
-    queryset = Dept.objects.all()
-    serializer_class = DeptSerializer
+@api_view(['GET', 'POST'])
+def dept_list(request):
+    if request.method == 'GET':
+        depts = Dept.objects.all()
+        serializer = DeptSerializer(depts, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
+        serializer = DeptSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class SessionViewSet(viewsets.ModelViewSet):
-    queryset = Session.objects.all()
-    serializer_class = SessionSerializer
+# Retrieve, update, or delete a single Dept
+@api_view(['GET', 'PUT', 'DELETE'])
+def dept_detail(request, pk):
+    try:
+        dept = Dept.objects.get(pk=pk)
+    except Dept.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = DeptSerializer(dept)
+        return Response(serializer.data)
+    elif request.method == 'PUT':
+        serializer = DeptSerializer(dept, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    elif request.method == 'DELETE':
+        dept.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+# Session
+
+@api_view(['GET', 'POST'])
+def session_list(request):
+    if request.method == 'GET':
+        sessions = Session.objects.all()
+        serializer = SessionSerializer(sessions, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
+        serializer = SessionSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Retrieve, update, or delete a single Session
+@api_view(['GET', 'PUT', 'DELETE'])
+def session_detail(request, pk):
+    try:
+        session = Session.objects.get(pk=pk)
+    except Session.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = SessionSerializer(session)
+        return Response(serializer.data)
+    elif request.method == 'PUT':
+        serializer = SessionSerializer(session, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    elif request.method == 'DELETE':
+        session.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
     # permission_classes = [permissions.IsAuthenticated]
 
-class Programme_LevelViewSet(viewsets.ModelViewSet):
-    queryset = Programme_Level.objects.all()
-    serializer_class = Program_LevelSerializer
-    # permission_classes = [permissions.IsAuthenticated]
 
-class GenderViewSet(viewsets.ModelViewSet):
-    queryset = gender.objects.all()
-    serializer_class = GenderSerializer
-
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 def create_gender(request):
-    if request.method == 'POST':
+    if request.method == 'GET':
+        genders = gender.objects.all()
+        serializer = GenderSerializer(genders, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
         serializer = GenderSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -161,26 +224,6 @@ def gender_detail(request, pk):
         gender_obj.delete()
         return Response({'message': 'record deleted'},status=status.HTTP_204_NO_CONTENT)
 
-
-@api_view(['GET', 'PUT', 'DELETE'])
-def user_table_detail(request, pk):
-    try:
-        user = user_table.objects.get(pk=pk)
-    except user_table.DoesNotExist:
-        return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-
-    if request.method == 'GET':
-        serializer = UserTableSerializer(user)
-        return Response(serializer.data)
-    elif request.method == 'PUT':
-        serializer = UserTableSerializer(user, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    elif request.method == 'DELETE':
-        user.delete()
-        return Response({'message': 'User deleted'}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['GET', 'POST'])
@@ -298,6 +341,89 @@ def subject_detail(request, subject_id):
     elif request.method == 'DELETE':
         subject.delete()
         return Response({'message': 'Subject deleted'}, status=status.HTTP_204_NO_CONTENT)
+
+
+
+# Semester
+
+@api_view(['GET', 'POST'])
+def semester_list(request):
+    if request.method == 'GET':
+        semesters = Semester.objects.all()
+        serializer = SemesterSerializer(semesters, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        serializer = SemesterSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# View for retrieving, updating, and deleting a specific semester
+@api_view(['GET', 'PUT', 'DELETE'])
+def semester_detail(request, pk):
+    try:
+        semester = Semester.objects.get(pk=pk)
+    except semester.DoesNotExist:
+        return Response({'message': 'semester not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = SemesterSerializer(semester)
+        return Response(serializer.data)
+
+    elif request.method == 'PUT':
+        serializer = SemesterSerializer(semester, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        semester.delete()
+        return Response({'message': 'semester deleted'}, status=status.HTTP_204_NO_CONTENT)
+
+
+#Slot
+
+@api_view(['GET', 'POST'])
+def slot_list(request):
+    if request.method == 'GET':
+        slots = Slot.objects.all()
+        serializer = SlotSerializer(slots, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        serializer = SlotSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# View for retrieving, updating, and deleting a specific slot
+@api_view(['GET', 'PUT', 'DELETE'])
+def slot_detail(request, pk):
+    try:
+        slot = Slot.objects.get(pk=pk)
+    except Slot.DoesNotExist:
+        return Response({'message': 'Slot not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = SlotSerializer(slot)
+        return Response(serializer.data)
+
+    elif request.method == 'PUT':
+        serializer = SlotSerializer(slot, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        slot.delete()
+        return Response({'message': 'Slot deleted'}, status=status.HTTP_204_NO_CONTENT)
+
+
 
 
 # from rest_framework import permissions
