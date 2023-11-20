@@ -8,8 +8,10 @@ from .serializers import UserTableSerializer, LoginSerializer,DeptSerializer,Ses
 from .serializers import RolesSerializer,GenderSerializer,Program_typeSerializer,SubjectSerializer,SemesterSerializer,SlotSerializer
 from django.contrib.auth import authenticate, login
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.decorators import api_view, permission_classes
+# from rest_framework import permissions
 
-
+# =============================================================================
 @api_view(['GET', 'POST'])
 def roles_create(request):
     if request.method == 'GET':
@@ -50,11 +52,17 @@ def roles_detail(request, pk):
 def user_table_create(request):
     if request.method == 'GET':
         user_tables = user_table.objects.all()
+        print("1---->")
         serializer = UserTableSerializer(user_tables, many=True)
         return Response(serializer.data)
     elif request.method == 'POST':
+        print("2---->")
+        
         serializer = UserTableSerializer(data=request.data)
+        
         if serializer.is_valid():
+            print("3---->")
+            
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

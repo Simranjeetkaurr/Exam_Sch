@@ -3,7 +3,7 @@
 import os
 import sys
 
-print("latest code v3")
+print("latest code v4")
 def main():
     """Run administrative tasks."""
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "exam.settings")

@@ -2,6 +2,7 @@ from xml.dom import ValidationErr
 from django.db import models
 import secrets
 import string
+
 def generate_random_password(length=12):
     characters = string.ascii_letters + string.digits + string.punctuation
     password = ''.join(secrets.choice(characters) for _ in range(length))
@@ -20,6 +21,15 @@ class roles(models.Model):
     ], default='active')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    
+    # for permission
+    # class Meta:
+    #     permissions = [
+    #         ("can_add_roles", "Can add roles"),
+    #         ("can_change_roles", "Can change roles"),
+    #         ("can_delete_roles", "Can delete roles"),
+    #     ]
 
 
 class gender(models.Model):
