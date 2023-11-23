@@ -1,5 +1,7 @@
 from django.shortcuts import render
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import viewsets,status
@@ -8,6 +10,7 @@ from .serializers import UserTableSerializer, LoginSerializer,DeptSerializer,Ses
 from .serializers import RolesSerializer,GenderSerializer,ProgramSerializer,SubjectSerializer,SemesterSerializer,SlotSerializer,StudentEnrollmentSerializer
 from django.contrib.auth import authenticate, login
 from rest_framework_simplejwt.tokens import RefreshToken
+
 
 
 @api_view(['GET', 'POST'])
@@ -102,7 +105,7 @@ def user_login(request):
                     'refresh': str(refresh),
                     'access': str(refresh.access_token),
                     'message': 'Login successful',
-                    'user_id': user.user_id,
+                    'user_id': user.id,
                     'user_role_id': user.user_role.role_id,
                     'user_name': user.user_name}
                 return Response(response_data, status=status.HTTP_200_OK)
@@ -360,7 +363,7 @@ def subject_search_api(request):
         semester_id = request.GET.get('semester_id')
         if program_id is not None and semester_id is not None:
             subjects = Subject.objects.filter(program_id=program_id, semester_id=semester_id)
-            subject_data = [{"subject_name": subject.subject_name, "subject_code": subject.subject_code} for subject in subjects]
+            subject_data = [{"subject_id":subject.subject_id ,"subject_name": subject.subject_name, "subject_code": subject.subject_code} for subject in subjects]
             return Response({"subjects": subject_data})
         else:
             return Response({'error': 'Both program_id and semester_id parameters are required.'}, status=400)

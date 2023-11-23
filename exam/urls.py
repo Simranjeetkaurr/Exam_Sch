@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path,include
-from rest_framework.decorators import api_view
+#from rest_framework.decorators import permission_classes
 from rest_framework import routers
 from exam_sch import views
 

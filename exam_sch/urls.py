@@ -5,7 +5,7 @@ from exam_sch.views import roles_create, create_gender,program_level_detail,prog
 from exam_sch.views import user_login,session_list,session_detail,user_table_detail,dept_detail,dept_list
 from . import views
 from exam_sch.views import semester_detail,semester_list,slot_list,slot_detail,program_search_api,subject_search_api,studentenrollment_list,studentenrollment_detail
-from rest_framework.decorators import api_view
+#from rest_framework.decorators import api_view
 
 router = routers.DefaultRouter()
 router.register(r'roles', views.roles_create, basename='roles')

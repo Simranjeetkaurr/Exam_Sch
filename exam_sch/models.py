@@ -40,7 +40,7 @@ class Dept(models.Model):
 
 class user_table(models.Model):
     user_role = models.ForeignKey(roles, on_delete=models.CASCADE, default=3)
-    user_id = models.AutoField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     user_name = models.CharField(max_length=255)
     user_email = models.EmailField(unique=True)
     user_password= models.TextField(default=generate_random_password)  
@@ -150,7 +150,8 @@ class StudentEnrollment(models.Model):
     session = models.ForeignKey(Session, on_delete=models.CASCADE,null=True,default=None)
     student_id= models.AutoField(primary_key=True)
     program_level = models.ForeignKey(Programme_Level, on_delete=models.CASCADE,null=True,default=None)
-    student_uid = models.CharField(max_length=11, editable=False, unique=True)
+    student_name = models.CharField(max_length=100)
+    student_uid = models.CharField(max_length=13,unique=True)
     student_email = models.EmailField(unique=True)
     gender = models.ForeignKey(gender, on_delete=models.CASCADE,null=True,default=None)
     program = models.ForeignKey(Program, on_delete=models.CASCADE)
@@ -159,7 +160,7 @@ class StudentEnrollment(models.Model):
 
 
     def __str__(self):
-        return f"{self.student.user_name} - {self.course.program_name}"
+        return f"{self.student_name} - {self.program}"
 
 
 # class SlotBooking(models.Model):
