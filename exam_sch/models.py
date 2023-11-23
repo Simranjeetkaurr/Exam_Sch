@@ -149,7 +149,6 @@ class Slot(models.Model):
 class StudentEnrollment(models.Model):
     session = models.ForeignKey(Session, on_delete=models.CASCADE,null=True,default=None)
     student_id= models.AutoField(primary_key=True)
-    student_name = models.CharField(max_length=255)
     program_level = models.ForeignKey(Programme_Level, on_delete=models.CASCADE,null=True,default=None)
     student_name = models.CharField(max_length=100)
     student_uid = models.CharField(max_length=13,unique=True)
