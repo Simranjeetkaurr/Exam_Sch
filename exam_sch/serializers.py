@@ -1,6 +1,6 @@
 
 from rest_framework import serializers
-from exam_sch.models import roles, user_table,Dept,Session,Programme_Level,gender,Subject,Program,StudentEnrollment
+from exam_sch.models import roles, user_table,Dept,Session,Programme_Level,gender,Subject,Program,StudentEnrollment,Specialization,Electives
 from exam_sch.models import Semester,Slot
 
 
@@ -62,4 +62,22 @@ class SlotSerializer(serializers.ModelSerializer):
 class StudentEnrollmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentEnrollment
+        fields = '__all__'
+        
+class EmailSerializer(serializers.Serializer):
+    receiver_email = serializers.EmailField()
+
+class BulkEmailSerializer(serializers.Serializer):
+    receiver_emails = serializers.ListField(child=serializers.EmailField())
+    subject = serializers.CharField()
+    body = serializers.CharField()
+
+class SpecializationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Specialization
+        fields = '__all__'
+        
+class ElectivesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Electives
         fields = '__all__'

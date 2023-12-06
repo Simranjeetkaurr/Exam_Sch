@@ -3,15 +3,34 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import permissions
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework import viewsets,status
-from .models import user_table,roles,Dept,Session,Programme_Level,gender,Program,Subject,Semester,Slot,StudentEnrollment
-from .serializers import UserTableSerializer, LoginSerializer,DeptSerializer,SessionSerializer,Program_LevelSerializer
-from .serializers import RolesSerializer,GenderSerializer,ProgramSerializer,SubjectSerializer,SemesterSerializer,SlotSerializer,StudentEnrollmentSerializer
+from .serializers import ElectivesSerializer
+from .models import user_table,roles,Dept,Session,Programme_Level,gender,Program,Subject,Semester,Slot,StudentEnrollment,Specialization,Electives
+from .serializers import UserTableSerializer, LoginSerializer,DeptSerializer,SessionSerializer,Program_LevelSerializer,SemesterSerializer,SpecializationSerializer,BulkEmailSerializer
+from .serializers import RolesSerializer,GenderSerializer,ProgramSerializer,SubjectSerializer,SemesterSerializer,SlotSerializer,StudentEnrollmentSerializer ,EmailSerializer
 from django.contrib.auth import authenticate, login
 from rest_framework_simplejwt.tokens import RefreshToken
+from django_q.tasks import async_task
+from django.http import JsonResponse
+import smtplib
+import ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import secrets
+import string
 
 
+class UserPagination(PageNumberPagination):
+    page_size = 200  # Set the number of items per page
+    page_size_query_param = 'page_size'
+    max_page_size = 200
+
+
+def generate_random_password(length=12):
+    characters = string.ascii_letters + string.digits + "!#$,-+*@"
+    password = ''.join(secrets.choice(characters) for _ in range(length))
+    return password
 
 @api_view(['GET', 'POST'])
 def roles_create(request):
@@ -51,10 +70,12 @@ def roles_detail(request, pk):
     
 @api_view(['GET', 'POST'])
 def user_table_create(request):
+    paginator = UserPagination()
     if request.method == 'GET':
         user_tables = user_table.objects.all()
-        serializer = UserTableSerializer(user_tables, many=True)
-        return Response(serializer.data)
+        result_page = paginator.paginate_queryset(user_tables, request)
+        serializer = UserTableSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
     elif request.method == 'POST':
         serializer = UserTableSerializer(data=request.data)
         if serializer.is_valid():
@@ -84,10 +105,62 @@ def user_table_detail(request, pk):
         return Response({'message': 'User deleted'}, status=status.HTTP_204_NO_CONTENT)
 
 
+
+##### Password RESET #######
+    
+@api_view(['PUT'])
+def password_reset(request, email):
+    email = email[1:-1]
+    print("hello",email)
+    try:
+        user = user_table.objects.get(user_email=email)
+    except user_table.DoesNotExist:
+        return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'PUT':
+        # Generate a new random password
+        new_password = generate_random_password()
+
+        # Update the user's password
+        user.user_password = new_password
+        user.save()
+                
+        sender_email = 'parth.e15279@cumail.in'
+        receiver_email = email
+        password = 'iuvw krkn voud rvnu' 
+        #You may also want to send the new password to the user via email here
+        subject = "Password Reset Instruction"
+        body = f"Dear {user.user_name},\n\nYour password has been reset. Below is your new password:\n\n{new_password}\n\nPlease copy and paste the new password when logging in. We recommend changing your password after logging in.\n\nBest regards,\nCO-ED Team"
+
+        message = MIMEMultipart()
+        message["From"] = sender_email
+        message["To"] = receiver_email
+        message["Subject"] = subject
+        message.attach(MIMEText(body, "plain"))
+
+        # Set up the SMTP server
+        smtp_server = "smtp.gmail.com"
+        port = 465  # Use 587 for TLS, or 465 for SSL
+        context = ssl.create_default_context()
+
+        # Connect to the server and send the email
+        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+            server.login(sender_email, password)
+            server.sendmail(sender_email, receiver_email, message.as_string())
+
+        return Response({'message': 'Email sent successfully'}, status=status.HTTP_200_OK)
+        serializer = UserTableSerializer(user)
+        return Response(serializer.data)
+
+    return Response({'message': 'Invalid request method'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
 @api_view(['POST'])
 def user_login(request):
-    if request.method== 'POST':
-        serializer = LoginSerializer(data= request.data)
+    if request.method == 'POST':
+        serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
             user_email_registered = serializer.validated_data['user_email']
             provided_password = serializer.validated_data['user_password']
@@ -96,26 +169,30 @@ def user_login(request):
             except user_table.DoesNotExist:
                 return Response({'message': 'User does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
-            if provided_password == user.user_password:
-                # Password is correct; log in the user
-                # You can customize the response data here
-                #print("sdfsdfd",user.user_role)
-                refresh = RefreshToken.for_user(user)
-                response_data = {
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token),
-                    'message': 'Login successful',
-                    'user_id': user.id,
-                    'user_role_id': user.user_role.role_id,
-                    'user_name': user.user_name}
-                return Response(response_data, status=status.HTTP_200_OK)
-    
+            if user.status == 'active':
+                # Check if the provided password matches the stored password
+                if provided_password == user.user_password:
+                    # Password is correct; log in the user
+                    refresh = RefreshToken.for_user(user)
+                    response_data = {
+                        'refresh': str(refresh),
+                        'access': str(refresh.access_token),
+                        'message': 'Login successful',
+                        'user_id': user.id,
+                        'user_role_id': user.user_role.role_id,
+                        'user_name': user.user_name}
+                    user_ip = request.META.get('REMOTE_ADDR', None)
+                    user.update_last_login()
+                    user.update_last_login_ip(user_ip)
+                    return Response(response_data, status=status.HTTP_200_OK)
+                else:
+                    # Password is incorrect
+                    return Response({'message': 'Login failed'}, status=status.HTTP_401_UNAUTHORIZED)
             else:
-                # Password is incorrect
-                return Response({'message': 'Login failed'}, status=status.HTTP_401_UNAUTHORIZED)
+                # User is inactive
+                return Response({'message': 'User is inactive'}, status=status.HTTP_403_FORBIDDEN)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
 # Department 
 
@@ -264,7 +341,6 @@ def program_level_detail(request, pk):
     elif request.method == 'DELETE':
         program.delete()
         return Response({'message': 'Program deleted'}, status=status.HTTP_204_NO_CONTENT)
-
 
 
 # Program
@@ -452,10 +528,12 @@ def slot_detail(request, pk):
 
 @api_view(['GET', 'POST'])
 def studentenrollment_list(request):
+    paginator = UserPagination()
     if request.method == 'GET':
         StudentEnrollments = StudentEnrollment.objects.all()
-        serializer = StudentEnrollmentSerializer(StudentEnrollments, many=True)
-        return Response(serializer.data)
+        result_page = paginator.paginate_queryset(StudentEnrollments, request)
+        serializer = StudentEnrollmentSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     elif request.method == 'POST':
         serializer = StudentEnrollmentSerializer(data=request.data)
@@ -477,7 +555,7 @@ def studentenrollment_detail(request, pk):
         return Response(serializer.data)
 
     elif request.method == 'PUT':
-        serializer = SlotSerializer(StudentEnrollments, data=request.data)
+        serializer = StudentEnrollmentSerializer(StudentEnrollments, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -486,6 +564,238 @@ def studentenrollment_detail(request, pk):
     elif request.method == 'DELETE':
         StudentEnrollment.delete()
         return Response({'message': 'enrolledstudent deleted'}, status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['GET'])
+def studentenrollment_seacrh(request):
+    if request.method == 'GET':
+        student_email = request.GET.get('student_email')
+        if student_email is not None:
+            enrolled = StudentEnrollment.objects.filter(student_email=student_email)
+            serializer = StudentEnrollmentSerializer(enrolled, many=True)
+            return Response(serializer.data)
+        else:
+            return Response({'error': 'student_email parameter is required.'}, status=400)
+
+
+# myapp/views.py
+
+@api_view(['POST'])
+def send_email(request):
+    serializer = BulkEmailSerializer(data=request.data)
+    if serializer.is_valid():
+        data = serializer.validated_data
+        sender_email = 'parth.e15279@cumail.in'
+        password = 'iuvw krkn voud rvnu'  # Replace with your app password
+
+        subject = data.get("subject")
+        body = data.get("body")
+
+        receiver_emails = data.get("receiver_emails", [])
+
+        smtp_server = "smtp.gmail.com"
+        port = 465
+        context = ssl.create_default_context()
+
+        # List to store emails that failed to send
+        failed_emails = []
+    
+
+        for receiver_email in receiver_emails:
+            message = MIMEMultipart()
+            message["From"] = sender_email
+            message["To"] = receiver_email
+            message["Subject"] = subject
+            message.attach(MIMEText(body, "plain"))
+
+            try:
+                with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+                    server.login(sender_email, password)
+                    server.sendmail(sender_email, receiver_email, message.as_string())
+            except Exception as e:
+                # Log the exception or add the email to the list of failed emails
+                failed_emails.append({"email": receiver_email, "error": str(e)})
+
+        if failed_emails:
+            return Response({'message': 'Emails sent with some failures', 'failed_emails': failed_emails}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response({'message': 'Emails sent successfully'}, status=status.HTTP_200_OK)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(['GET', 'POST'])
+def specialization_list(request):
+    if request.method == 'GET':
+        specs = Specialization.objects.all()
+        serializer = SpecializationSerializer(specs, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        serializer = SubjectSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# View for retrieving, updating, and deleting a specific subject
+@api_view(['GET', 'PUT', 'DELETE'])
+def specialization_detail(request, spec_id):
+    try:
+        specs = Specialization.objects.get(spec_id=spec_id)
+    except Specialization.DoesNotExist:
+        return Response({'message': 'specialization not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = SpecializationSerializer(specs)
+        return Response(serializer.data)
+
+    elif request.method == 'PUT':
+        serializer = SpecializationSerializer(specs, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        specs.delete()
+        return Response({'message': 'Specialization deleted'}, status=status.HTTP_204_NO_CONTENT)
+
+
+
+@api_view(['GET'])
+def specialization_search_api(request):
+    if request.method == 'GET':
+        program_id = request.GET.get('program_id')
+        semester_id = request.GET.get('semester_id')
+        if program_id is not None and semester_id is not None:
+            specials = Specialization.objects.filter(program_id=program_id, semester_id=semester_id)
+            specilization_data = [{"specialization_id":special.spec_id ,"specialization_category": special.spec_category,"specialization_name": special.spec_name, "specilizationt_code": special.spec_code} for special in specials] 
+            return Response({"specialization": specilization_data})
+        else:
+            return Response({'error': 'Both program_id and semester_id parameters are required.'}, status=400)
+
+
+###### Electives #################
+
+@api_view(['GET', 'POST'])
+def Electives_list(request):
+    if request.method == 'GET':
+        elecs = Electives.objects.all()
+        serializer = ElectivesSerializer(elecs, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        serializer = ElectivesSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# View for retrieving, updating, and deleting a specific subject
+@api_view(['GET', 'PUT', 'DELETE'])
+def Electives_detail(request, elec_id):
+    try:
+        elecs = Electives.objects.get(elec_id=elec_id)
+    except Electives.DoesNotExist:
+        return Response({'message': 'electives not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = ElectivesSerializer(elecs)
+        return Response(serializer.data)
+
+    elif request.method == 'PUT':
+        serializer = SpecializationSerializer(elecs, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        elecs.delete()
+        return Response({'message': 'electives deleted'}, status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['GET'])
+def electives_search_api(request):
+    if request.method == 'GET':
+        program_id = request.GET.get('program_id')
+        semester_id = request.GET.get('semester_id')
+        if program_id is not None and semester_id is not None:
+            electives = Electives.objects.filter(program_id=program_id, semester_id=semester_id)
+            elective_data = [{"elective_id":elective.elec_id ,"elective_category": elective.elec_category, "elective_name": elective.elec_name,"elective_code": elective.elec_code} for elective in electives]
+            return Response({"elective":elective_data})
+        else:
+            return Response({'error': 'Both program_id and semester_id parameters are required.'}, status=400)
+# myapp/views.py
+
+
+#####BULK EMAIL ##########
+# @csrf_exempt
+# @api_view(['POST'])
+# def send_email(request):
+#     serializer = EmailSerializer(data=request.data)
+#     if serializer.is_valid():
+#         data = serializer.validated_data
+#         sender_email = 'parth.e15279@cumail.in'  # Use get() to avoid KeyError
+#         receiver_emails = data.get('receiver_email')
+#         password = 'lktx ovbx qvoh yxsp'  # Replace with your app password
+#         subject = "Password Reset Instruction"
+#         body = """
+# Subject: Password Reset Request for [Your Application Name]
+
+# Dear [User],
+
+# We recently received a request to reset your password for [Your Application Name]. If you did not make this request, you can ignore this email.
+
+# To reset your password, please follow the link below:
+# [Password Reset Link]
+
+# Please note that this link is valid for a limited time. If you have any issues or did not request a password reset, please contact our support team at [Your Support Email].
+
+# Thank you for using [Your Application Name].
+
+# Best regards,
+# [Your Application Team]
+# """
+
+#         # # Check if the receiver's email is registered
+#         # # if not StudentEnrollment.objects.filter(student_email=receiver_email).exists():
+#         # #     return JsonResponse({'error': 'Receiver email not registered'}, status=status.HTTP_400_BAD_REQUEST)
+
+#         # # Create the email message
+#         # message = MIMEMultipart()
+#         # message["From"] = sender_email
+#         # message["To"] = receiver_email
+#         # message["Subject"] = subject
+#         # message.attach(MIMEText(body, "plain"))
+
+#         # # Set up the SMTP server
+#         # smtp_server = "smtp.gmail.com"
+#         # port = 465  # Use 587 for TLS, or 465 for SSL
+#         # context = ssl.create_default_context()
+        
+#         for receiver_email in receiver_emails:
+#             # Create the email message for each recipient
+#             message = MIMEMultipart()
+#             message["From"] = sender_email
+#             message["To"] = ", ".join(receiver_emails)
+#             message["Subject"] = subject
+#             message.attach(MIMEText(body, "plain"))
+
+#             # Set up the SMTP server
+#             smtp_server = "smtp.gmail.com"
+#             port = 465  # Use 587 for TLS, or 465 for SSL
+#             context = ssl.create_default_context()
+
+#         # Connect to the server and send the email
+#         with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+#             server.login(sender_email, password)
+#             server.sendmail(sender_email, receiver_email, message.as_string())
+
+#         return JsonResponse({'message': 'Email sent successfully'}, status=status.HTTP_200_OK)
+
+#     return JsonResponse({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # from rest_framework import permissions

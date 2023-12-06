@@ -1,10 +1,11 @@
 from django.urls import path, include
 from rest_framework import routers
-from exam_sch.views import user_table_create,subject_list,subject_detail,program_list,program_detail
+from exam_sch.views import user_table_create,subject_list,subject_detail,program_list,program_detail,specialization_search_api
 from exam_sch.views import roles_create, create_gender,program_level_detail,program_level_list,roles_detail
-from exam_sch.views import user_login,session_list,session_detail,user_table_detail,dept_detail,dept_list
-from . import views
-from exam_sch.views import semester_detail,semester_list,slot_list,slot_detail,program_search_api,subject_search_api,studentenrollment_list,studentenrollment_detail
+from exam_sch.views import user_login,session_list,session_detail,user_table_detail,dept_detail,dept_list,send_email ,password_reset,specialization_detail,specialization_list
+from . import views 
+from exam_sch.views import semester_detail,semester_list,slot_list,slot_detail,program_search_api,subject_search_api,studentenrollment_list,studentenrollment_detail,studentenrollment_seacrh
+from exam_sch.views import electives_search_api,Electives_detail,Electives_list
 #from rest_framework.decorators import api_view
 
 router = routers.DefaultRouter()
@@ -19,6 +20,8 @@ router.register(r'Program',views.program_list, basename = 'Program')
 router.register(r'Semester',views.semester_list, basename = 'semester')
 router.register(r'Slot',views.slot_list,basename= 'slot')
 router.register(r'StudentEnrollment',views.studentenrollment_list,basename= 'studentenrollment')
+router.register(r'Specialization',views.specialization_list,basename= 'Specialization')
+router.register(r'Electives',views.Electives_list,basename= 'Electives')
 #urlpatterns = [
 #    path('', include(router.urls)),
 #    # Add other URL patterns if needed
@@ -52,9 +55,16 @@ urlpatterns = [
     path('api/subject-search/', subject_search_api, name='subject-search-api'),
     path('api/studentenrollment_list/', views.studentenrollment_list, name='studentenrollment-list'),
     path('api/studentenrollment_detail/<int:pk>/', views.studentenrollment_detail, name='studentenrollment-detail'),
-    
+    path('api/studentenrollment-search/', studentenrollment_seacrh, name='studentenrollment_seacrh-api'),
+    path('api/specialization_list/', views.specialization_list, name='specialization-list'),
+    path('api/specialization_detail/<int:pk>/', views.specialization_detail, name='specialization-detail'),
+    path('api/specialization-search/', specialization_search_api, name='specialization-search-api'),
+    path('api/send-email/', send_email, name='send-email'),
+    path('api/electives_list/', views.Electives_list, name='electives-list'),
+    path('api/electives_detail/<int:pk>/', views.Electives_detail, name='electives-detail'),
+    path('api/electives-search/', electives_search_api, name='electives-search-api'),
+    path('api/send-email/', send_email, name='send-email'),
+    path('api/password-reset/<str:email>/', password_reset, name='password-reset'),
 
 ]
-
-
  

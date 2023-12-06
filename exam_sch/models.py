@@ -2,6 +2,9 @@ from xml.dom import ValidationErr
 from django.db import models
 import secrets
 import string
+from django.utils import timezone
+from phonenumber_field.modelfields import PhoneNumberField
+
 def generate_random_password(length=12):
     characters = string.ascii_letters + string.digits + string.punctuation[0:6]
     password = ''.join(secrets.choice(characters) for _ in range(length))
@@ -43,6 +46,7 @@ class user_table(models.Model):
     id = models.AutoField(primary_key=True)
     user_name = models.CharField(max_length=255)
     user_email = models.EmailField(unique=True)
+    user_mobile = PhoneNumberField(unique=True, null=True, blank=True, help_text='Enter your mobile number')
     user_password= models.TextField(default=generate_random_password)  
     user_gender = models.ForeignKey(gender,on_delete=models.CASCADE)
     department = models.ForeignKey(Dept,on_delete=models.CASCADE,default=1)
@@ -50,6 +54,16 @@ class user_table(models.Model):
     created_by = models.ForeignKey(roles, on_delete=models.SET_NULL, null=True, related_name='users_created')
     #created_by = models.ForeignKey(roles, on_delete=models.CASCADE, related_name='users_with_rolename',null=True)
     status = models.CharField(max_length=12, choices=[('active', 'Active'), ('inactive', 'Inactive')])
+    last_login_ip = models.GenericIPAddressField(null=True, blank=True, help_text='Last login IP address')
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    def update_last_login_ip(self, ip_address):
+        self.last_login_ip = ip_address
+        self.save()
+
+    def update_last_login(self):
+        self.updated_at = timezone.now()
+        self.save()
 
     def save(self, *args, **kwargs):
         if not self.created_by:
@@ -95,7 +109,7 @@ class Programme_Level(models.Model):
 class Semester(models.Model):
     semester_id = models.AutoField(primary_key=True)
     semester_name = models.CharField(max_length=255, unique=True)
-    # semester_code = models.CharField(max_length=10, unique=True)
+    #semester_code = models.CharField(max_length=10, unique=True)
 
     def __str__(self):
         return self.semester_name    
@@ -112,8 +126,8 @@ class Program(models.Model):
     
 class Subject(models.Model):
     subject_id = models.AutoField(primary_key=True)
-    subject_name = models.CharField(max_length=255, unique=True)
-    subject_code = models.CharField(max_length=10, unique=True)
+    subject_name = models.CharField(max_length=255)
+    subject_code = models.CharField(max_length=10)
     program = models.ForeignKey(Program, on_delete=models.CASCADE)
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
 
@@ -146,21 +160,83 @@ class Slot(models.Model):
         super(Slot, self).save(*args, **kwargs)
 
 
-class StudentEnrollment(models.Model):
-    session = models.ForeignKey(Session, on_delete=models.CASCADE,null=True,default=None)
-    student_id= models.AutoField(primary_key=True)
-    program_level = models.ForeignKey(Programme_Level, on_delete=models.CASCADE,null=True,default=None)
-    student_name = models.CharField(max_length=100)
-    student_uid = models.CharField(max_length=13,unique=True)
-    student_email = models.EmailField(unique=True)
-    gender = models.ForeignKey(gender, on_delete=models.CASCADE,null=True,default=None)
+class Specialization(models.Model):
+    spec_id = models.AutoField(primary_key=True)
+    spec_category = models.CharField(max_length=255,null= True)
+    spec_name = models.CharField(max_length=255)
+    spec_code = models.CharField(max_length=10)
     program = models.ForeignKey(Program, on_delete=models.CASCADE)
-    subjects = models.ManyToManyField(Subject)
-    semester = models.ForeignKey(Semester, on_delete=models.CASCADE,null=True,default=None)
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
+    
+    def __str__(self):
+        return self.spec_name
 
+
+
+class Electives(models.Model):
+    elec_id = models.AutoField(primary_key=True)
+    elec_category = models.CharField(max_length=255)
+    elec_name = models.CharField(max_length=255,null= True)
+    elec_code = models.CharField(max_length=10)
+    program = models.ForeignKey(Program, on_delete=models.CASCADE)
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
+    
+    def __str__(self):
+        return self.elec_category    
+
+# class StudentEnrollment(models.Model):
+#     session = models.ForeignKey(Session, on_delete=models.CASCADE,null=True,default=None)
+#     student_id= models.AutoField(primary_key=True)
+#     program_level = models.ForeignKey(Programme_Level, on_delete=models.CASCADE,null=True,default=None)
+#     student_name = models.CharField(max_length=100)
+#     student_uid = models.CharField(max_length=13,unique=True)
+#     student_email = models.EmailField(unique=True)
+#     user_mobile = PhoneNumberField(unique=True, null=True, blank=True, help_text='Enter your mobile number')
+#     gender = models.ForeignKey(gender, on_delete=models.CASCADE,null=True,default=None)
+#     program = models.ForeignKey(Program, on_delete=models.CASCADE)
+#     subjects = models.ManyToManyField(Subject)
+#     semester = models.ForeignKey(Semester, on_delete=models.CASCADE,null=True,default=None)
+#     spec = models.ForeignKey(Specialization, on_delete=models.CASCADE,null=True,default=None)
+    
+#     def __str__(self):
+#         return f"{self.student_name} - {self.program}"
+
+
+class StudentEnrollment(models.Model):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, null=True, default=None)
+    student_id = models.AutoField(primary_key=True)
+    program_level = models.ForeignKey(Programme_Level, on_delete=models.CASCADE, null=True, default=None)
+    student_name = models.CharField(max_length=100)
+    student_uid = models.CharField(max_length=13)
+    student_email = models.EmailField()
+    student_mobile = PhoneNumberField(null=True, blank=True, help_text='Enter your mobile number')
+    gender = models.ForeignKey(gender, on_delete=models.CASCADE, null=True, default=None)
+    program = models.ForeignKey(Program, on_delete=models.CASCADE)
+    subject = models.ManyToManyField(Subject)
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE, null=True, default=None)
+    spec = models.ForeignKey(Specialization, on_delete=models.CASCADE, null=True, default=None)
+    elec = models.ForeignKey(Electives, on_delete=models.CASCADE, null=True, default=None)
 
     def __str__(self):
         return f"{self.student_name} - {self.program}"
+
+    def save(self, *args, **kwargs):
+        # Check for duplicates within the same session
+        duplicates = StudentEnrollment.objects.filter(
+            session=self.session,
+            student_uid=self.student_uid,
+            student_email=self.student_email,
+            student_mobile=self.student_mobile
+        ).exclude(student_id=self.student_id)
+
+        if duplicates.exists():
+            # Handle duplicates as needed (raise an exception, log, etc.)
+            raise ValueError("Duplicate records within the same session are not allowed.")
+
+        super().save(*args, **kwargs)
+
+    class Meta:
+        unique_together = ('session', 'student_uid')
 
 
 # class SlotBooking(models.Model):

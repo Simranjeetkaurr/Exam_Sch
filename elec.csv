@@ -1,0 +1,10 @@
+elec_id,elec_category,elec_code,program_id,semester_id,elec_name
+1,Elective 1,23ONMCH671,4,2,Web Application Development
+2,Elective 1,23ONMCH672,4,2,Mobile Application Development
+3,Elective 1,23ONMCH673,4,2,Front End Technologies
+4,Elective 2,23ONMCT674,4,2,Cyber Security
+5,Elective 2,23ONMCT675,4,2,Blockchain and its Applications
+6,Elective 2,23ONMCT676,4,2,Artificial Intelligence
+7,Elective 3,23ONMCH721,4,3,Advanced Web Application Development
+8,Elective 3,23ONMCH722,4,3,Advanced Mobile Application Development
+9,Elective 3,23ONMCH723,4,3,Back End Technologies
