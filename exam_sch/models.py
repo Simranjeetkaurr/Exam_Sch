@@ -4,6 +4,7 @@ import secrets
 import string
 from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
+from django.core.exceptions import ValidationError
 
 def generate_random_password(length=12):
     characters = string.ascii_letters + string.digits + string.punctuation[0:6]
@@ -27,7 +28,7 @@ class roles(models.Model):
 
 class gender(models.Model):
     gender_id = models.AutoField(primary_key=True)
-    gender_name = models.CharField(max_length=12, choices=[('Male', 'male'), ('Female', 'female'), ('Other', 'other')])
+    gender_name = models.CharField(max_length=12, choices=[('Male', 'male'), ('Female', 'female'), ('Other', 'other')], unique= True)
     gender_status = models.CharField(max_length=12, choices=[('active', 'Active'), ('inactive', 'Inactive')])
 
 class Dept(models.Model):
@@ -136,30 +137,6 @@ class Subject(models.Model):
         return self.subject_name
         
 
-# Slots
-
-class Slot(models.Model):
-    slot_id = models.AutoField(primary_key=True)
-    start_time = models.TimeField()
-    end_time = models.TimeField()
-    date = models.DateField()
-    slot_created = models.CharField(max_length=11, editable=False, unique=True)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE,null=True,default=None)
-
-    def clean(self):
-        # Calculate the duration in minutes between start_time and end_time
-        duration = (self.end_time - self.start_time).seconds // 60
-
-        # Check if the duration is more than 180 minutes (3 hours)
-        if duration > 180:
-            raise ValidationErr(('The slot duration cannot be more than 3 hours.'))
-
-    def save(self, *args, **kwargs):
-        # Generate the slot_created as a combination of start_time and end_time
-        self.slot_created = f'{self.start_time.strftime("%H:%M")}-{self.end_time.strftime("%H:%M")}'
-        super(Slot, self).save(*args, **kwargs)
-
-
 class Specialization(models.Model):
     spec_id = models.AutoField(primary_key=True)
     spec_category = models.CharField(max_length=255,null= True)
@@ -170,8 +147,6 @@ class Specialization(models.Model):
     
     def __str__(self):
         return self.spec_name
-
-
 
 class Electives(models.Model):
     elec_id = models.AutoField(primary_key=True)
@@ -184,22 +159,45 @@ class Electives(models.Model):
     def __str__(self):
         return self.elec_category    
 
-# class StudentEnrollment(models.Model):
-#     session = models.ForeignKey(Session, on_delete=models.CASCADE,null=True,default=None)
-#     student_id= models.AutoField(primary_key=True)
-#     program_level = models.ForeignKey(Programme_Level, on_delete=models.CASCADE,null=True,default=None)
-#     student_name = models.CharField(max_length=100)
-#     student_uid = models.CharField(max_length=13,unique=True)
-#     student_email = models.EmailField(unique=True)
-#     user_mobile = PhoneNumberField(unique=True, null=True, blank=True, help_text='Enter your mobile number')
-#     gender = models.ForeignKey(gender, on_delete=models.CASCADE,null=True,default=None)
-#     program = models.ForeignKey(Program, on_delete=models.CASCADE)
-#     subjects = models.ManyToManyField(Subject)
-#     semester = models.ForeignKey(Semester, on_delete=models.CASCADE,null=True,default=None)
-#     spec = models.ForeignKey(Specialization, on_delete=models.CASCADE,null=True,default=None)
+
+# Slots
+
+class Slot(models.Model):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE)
+    slot_id = models.AutoField(primary_key=True)
+    slot_list = models.TextField()
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('session', 'subject')
+
     
-#     def __str__(self):
-#         return f"{self.student_name} - {self.program}"
+class SpecSlot(models.Model):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE)
+    slot_id = models.AutoField(primary_key=True)
+    slot_list = models.TextField()
+    spec = models.ForeignKey(Specialization, on_delete=models.CASCADE)
+    
+    
+class ElecSlot(models.Model):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE)
+    slot_id = models.AutoField(primary_key=True)
+    slot_list = models.TextField()
+    elec = models.ForeignKey(Electives, on_delete=models.CASCADE)
+    
+    # def clean(self):
+    #     if not self.slot_list:
+    #         raise ValidationError({'slot_list': 'This field is required.'})
+    #     if self.session is None:
+    #         raise ValidationError({'session': 'This field is required.'})
+    #     if self.subject is None:
+    #         raise ValidationError({'subject': 'This field is required.'})
+
+    # def save(self, *args, **kwargs):
+    #     self.full_clean()  # Validate the model fields
+    #     super(Slot, self).save(*args, **kwargs)
+
+
 
 
 class StudentEnrollment(models.Model):
@@ -212,10 +210,9 @@ class StudentEnrollment(models.Model):
     student_mobile = PhoneNumberField(null=True, blank=True, help_text='Enter your mobile number')
     gender = models.ForeignKey(gender, on_delete=models.CASCADE, null=True, default=None)
     program = models.ForeignKey(Program, on_delete=models.CASCADE)
-    subject = models.ManyToManyField(Subject)
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE, null=True, default=None)
-    spec = models.ForeignKey(Specialization, on_delete=models.CASCADE, null=True, default=None)
-    elec = models.ForeignKey(Electives, on_delete=models.CASCADE, null=True, default=None)
+    spec = models.ManyToManyField(Specialization,null=True)
+    elec = models.ManyToManyField(Electives,null=True)
 
     def __str__(self):
         return f"{self.student_name} - {self.program}"

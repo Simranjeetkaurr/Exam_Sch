@@ -74,15 +74,33 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "exam.wsgi.application"
 
+# REST_FRAMEWORK = {
+#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         'rest_framework_simplejwt.authentication.JWTAuthentication',
+#         'rest_framework.authentication.TokenAuthentication',
+#         'rest_framework.permissions.IsAuthenticated',),
+#     'DEFAULT_THROTTLE_RATES': {
+#         'anon': '100/day',
+#         'user': '1000/day'
+#     }
+#     # Add any other default permissions if needed
+# }
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.TokenAuthentication'),
+        'rest_framework.authentication.TokenAuthentication',
+        # Add any other authentication classes...
+    ),
+    # 'DEFAULT_PERMISSION_CLASSES': (
+    #     'rest_framework.permissions.IsAuthenticated',
+    #     # Add any other permission classes...
+
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/day',
-        'user': '1000/day'
+        'user': '1000/day',
     }
-    # Add any other default permissions if needed
+    # Add any other default settings...
 }
 
 SIMPLE_JWT = {

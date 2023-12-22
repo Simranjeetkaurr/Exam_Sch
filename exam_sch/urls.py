@@ -5,7 +5,7 @@ from exam_sch.views import roles_create, create_gender,program_level_detail,prog
 from exam_sch.views import user_login,session_list,session_detail,user_table_detail,dept_detail,dept_list,send_email ,password_reset,specialization_detail,specialization_list
 from . import views 
 from exam_sch.views import semester_detail,semester_list,slot_list,slot_detail,program_search_api,subject_search_api,studentenrollment_list,studentenrollment_detail,studentenrollment_seacrh
-from exam_sch.views import electives_search_api,Electives_detail,Electives_list
+from exam_sch.views import electives_search_api,Electives_detail,Electives_list,elec_slot_detail,elec_slot_list,spec_slot_detail,spec_slot_list,studentenrollment_session_seacrh
 #from rest_framework.decorators import api_view
 
 router = routers.DefaultRouter()
@@ -22,6 +22,8 @@ router.register(r'Slot',views.slot_list,basename= 'slot')
 router.register(r'StudentEnrollment',views.studentenrollment_list,basename= 'studentenrollment')
 router.register(r'Specialization',views.specialization_list,basename= 'Specialization')
 router.register(r'Electives',views.Electives_list,basename= 'Electives')
+router.register(r'SpecSlot',views.spec_slot_list,basename= 'SpecSlot')
+router.register(r'ElecSlot',views.Electives_list,basename= 'ElecSlot')
 #urlpatterns = [
 #    path('', include(router.urls)),
 #    # Add other URL patterns if needed
@@ -50,12 +52,13 @@ urlpatterns = [
     path('api/semester_list/', views.semester_list, name='semester-list'),
     path('api/semester_detail/<int:semester_id>/', views.semester_detail, name='semester-detail'),
     path('api/slots_list/', views.slot_list, name='slot-list'),
-    path('api/slots_detail/<int:slot_id>/', views.slot_detail, name='slot-detail'),
+    path('api/slots_detail/<int:pk>/', views.slot_detail, name='slot-detail'),
     path('api/program-search/', program_search_api, name='program-search-api'),
     path('api/subject-search/', subject_search_api, name='subject-search-api'),
     path('api/studentenrollment_list/', views.studentenrollment_list, name='studentenrollment-list'),
     path('api/studentenrollment_detail/<int:pk>/', views.studentenrollment_detail, name='studentenrollment-detail'),
     path('api/studentenrollment-search/', studentenrollment_seacrh, name='studentenrollment_seacrh-api'),
+    path('api/studentenrollment-session-search/', studentenrollment_session_seacrh, name='studentenrollment_session_search-api'),
     path('api/specialization_list/', views.specialization_list, name='specialization-list'),
     path('api/specialization_detail/<int:pk>/', views.specialization_detail, name='specialization-detail'),
     path('api/specialization-search/', specialization_search_api, name='specialization-search-api'),
@@ -65,6 +68,10 @@ urlpatterns = [
     path('api/electives-search/', electives_search_api, name='electives-search-api'),
     path('api/send-email/', send_email, name='send-email'),
     path('api/password-reset/<str:email>/', password_reset, name='password-reset'),
+    path('api/elec_slots_list/', views.elec_slot_list, name='elec-slot-list'),
+    path('api/elec_detail/<int:pk>/', views.elec_slot_detail, name='Elec-slot-detail'),
+    path('api/spec_slots_list/', views.spec_slot_list, name='spec-slot-list'),
+    path('api/spec_detail/<int:pk>/', views.spec_slot_detail, name='spec-slot-detail'),
 
 ]
  
